@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:responsi_profil_mahasiswa/providers/app_provider.dart';
-import 'package:responsi_profil_mahasiswa/screens/profile_screen.dart';
+import 'package:responsi_profil_mahasiswa/screens/home_screen.dart';
 import 'package:responsi_profil_mahasiswa/services/secure_storage_service.dart';
 import 'package:responsi_profil_mahasiswa/main.dart';
 import 'package:responsi_profil_mahasiswa/models/student.dart';
@@ -36,6 +36,9 @@ void main() {
 
   testWidgets('Profil tampil dan bisa diedit', (tester) async {
     await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Profil Mahasiswa'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Mahasiswa Amikom'), findsOneWidget);
     expect(find.text('NIM: 00000000'), findsOneWidget);
@@ -77,7 +80,8 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const MyApp());
-    await tester.tap(find.text('Tambah Catatan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tambah Catatan'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Simpan Catatan'));
@@ -94,7 +98,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Kuliah'), findsOneWidget);
-    expect(find.text('Catatan (1)'), findsOneWidget);
+    expect(find.text('Daftar Catatan'), findsOneWidget);
 
     final stored = (await SharedPreferencesAsync().getString(
       'notes_metadata',
@@ -106,12 +110,13 @@ void main() {
     await tester.pumpWidget(const MyApp());
     await tester.pumpAndSettle();
     expect(find.text('Kuliah'), findsOneWidget);
-    expect(find.text('Catatan (1)'), findsOneWidget);
+    expect(find.text('Daftar Catatan'), findsOneWidget);
   });
 
   testWidgets('Provider menghapus catatan dari kedua storage', (tester) async {
     await tester.pumpWidget(const MyApp());
-    await tester.tap(find.text('Tambah Catatan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tambah Catatan'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Kuliah');
     await tester.enterText(
@@ -121,7 +126,7 @@ void main() {
     await tester.tap(find.text('Simpan Catatan'));
     await tester.pumpAndSettle();
 
-    final providerContext = tester.element(find.byType(ProfileScreen));
+    final providerContext = tester.element(find.byType(HomeScreen));
     final provider = AppProvider.of(providerContext);
     final id = provider.notes.single.id;
     await provider.deleteNote(id);

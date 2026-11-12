@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/student.dart';
 import '../providers/app_provider.dart';
 import '../widgets/profile_card.dart';
-import 'note_form_screen.dart';
-import 'public_users_screen.dart';
 
 /// Halaman profil mahasiswa yang membaca data dari [AppProvider].
 class ProfileScreen extends StatelessWidget {
@@ -20,14 +18,7 @@ class ProfileScreen extends StatelessWidget {
     AppProvider.of(context).updateStudent(edited);
   }
 
-  Future<void> _openNoteForm(BuildContext context) async {
-    await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const NoteFormScreen()),
-    );
-  }
-
-  /// Membangun tampilan profil serta pintu masuk form catatan.
+  /// Membangun tampilan profil dan tombol edit.
   @override
   Widget build(BuildContext context) {
     final provider = AppProvider.of(context);
@@ -46,42 +37,6 @@ class ProfileScreen extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit Profil'),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => _openNoteForm(context),
-                icon: const Icon(Icons.note_add_outlined),
-                label: const Text('Tambah Catatan'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PublicUsersScreen()),
-                ),
-                icon: const Icon(Icons.public),
-                label: const Text('Daftar Pengguna'),
-              ),
-              if (provider.isLoading) ...[
-                const SizedBox(height: 20),
-                const Center(child: CircularProgressIndicator()),
-              ],
-              if (provider.storageError != null) ...[
-                const SizedBox(height: 20),
-                Text(provider.storageError!),
-                TextButton(
-                  onPressed: provider.reloadNotes,
-                  child: const Text('Coba lagi'),
-                ),
-              ],
-              if (provider.notes.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text(
-                  'Catatan (${provider.notes.length})',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                for (final note in provider.notes)
-                  ListTile(title: Text(note.title)),
-              ],
             ],
           ),
         ),

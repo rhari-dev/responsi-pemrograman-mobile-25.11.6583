@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'config/app_config.dart';
 import 'providers/app_provider.dart';
-import 'screens/profile_screen.dart';
+import 'screens/home_screen.dart';
 
 /// Menjalankan aplikasi profil mahasiswa.
 Future<void> main() async {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       title: 'Profil Mahasiswa',
       theme: ThemeData(colorSchemeSeed: Colors.deepPurple, useMaterial3: true),
       builder: (context, child) => AppProviderWrapper(child: child!),
-      home: const ProfileScreen(),
+      home: const HomeScreen(),
     );
   }
 }
