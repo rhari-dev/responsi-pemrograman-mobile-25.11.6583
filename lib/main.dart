@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'config/app_config.dart';
 import 'providers/app_provider.dart';
 import 'screens/profile_screen.dart';
 
 /// Menjalankan aplikasi profil mahasiswa.
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.load();
+  runApp(const MyApp());
+}
 
 /// Akar aplikasi untuk tugas profil mahasiswa.
 class MyApp extends StatelessWidget {

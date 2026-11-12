@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../models/note.dart';
 import '../models/student.dart';
+import '../repositories/note_repository.dart';
 
 /// Menyediakan profil dan catatan bagi widget di bawahnya.
 class AppProvider extends InheritedWidget {
@@ -13,6 +14,9 @@ class AppProvider extends InheritedWidget {
     required this.updateStudent,
     required this.addNote,
     required this.deleteNote,
+    required this.isLoading,
+    required this.storageError,
+    required this.reloadNotes,
     required super.child,
   });
 
@@ -25,11 +29,20 @@ class AppProvider extends InheritedWidget {
   /// Mengganti profil mahasiswa.
   final void Function(Student) updateStudent;
 
-  /// Menambah catatan.
-  final void Function(Note) addNote;
+  /// Menambah catatan lewat repository.
+  final Future<void> Function(Note) addNote;
 
-  /// Menghapus catatan berdasarkan ID.
-  final void Function(String) deleteNote;
+  /// Menghapus catatan berdasarkan ID lewat repository.
+  final Future<void> Function(String) deleteNote;
+
+  /// Apakah catatan sedang dimuat.
+  final bool isLoading;
+
+  /// Pesan aman jika penyimpanan tidak dapat diakses.
+  final String? storageError;
+
+  /// Mencoba memuat ulang catatan dari repository.
+  final Future<void> Function() reloadNotes;
 
   /// Mengakses state aplikasi sekaligus mendaftarkan dependensi widget.
   static AppProvider of(BuildContext context) {
@@ -38,19 +51,23 @@ class AppProvider extends InheritedWidget {
     return provider!;
   }
 
-  /// Memberi tahu konsumen jika profil atau daftar catatan berubah.
+  /// Memberi tahu konsumen jika profil, catatan, atau status berubah.
   @override
   bool updateShouldNotify(AppProvider oldWidget) =>
-      student != oldWidget.student || notes != oldWidget.notes;
+      student != oldWidget.student ||
+      notes != oldWidget.notes ||
+      isLoading != oldWidget.isLoading ||
+      storageError != oldWidget.storageError;
 }
 
-/// Menyimpan state aplikasi di memori dan membagikannya lewat [AppProvider].
+/// Mengelola state dan menjadikan repository satu-satunya akses catatan.
 class AppProviderWrapper extends StatefulWidget {
-  /// Membungkus halaman aplikasi; profil awal boleh diganti untuk pengujian.
+  /// Membungkus halaman aplikasi dengan state dan repository.
   const AppProviderWrapper({
     super.key,
     required this.child,
     this.initialStudent,
+    this.noteRepository,
   });
 
   /// Halaman di bawah provider.
@@ -59,6 +76,9 @@ class AppProviderWrapper extends StatefulWidget {
   /// Profil awal opsional.
   final Student? initialStudent;
 
+  /// Repository opsional, misalnya untuk pengujian widget.
+  final NoteRepository? noteRepository;
+
   /// Membuat state pembungkus.
   @override
   State<AppProviderWrapper> createState() => _AppProviderWrapperState();
@@ -66,11 +86,15 @@ class AppProviderWrapper extends StatefulWidget {
 
 class _AppProviderWrapperState extends State<AppProviderWrapper> {
   late Student _student;
+  late final NoteRepository _repository;
   List<Note> _notes = [];
+  bool _isLoading = true;
+  String? _storageError;
 
   @override
   void initState() {
     super.initState();
+    _repository = widget.noteRepository ?? NoteRepository();
     _student =
         widget.initialStudent ??
         Student(
@@ -79,15 +103,43 @@ class _AppProviderWrapperState extends State<AppProviderWrapper> {
           programStudi: 'Informatika',
           email: 'mahasiswa@example.com',
         );
+    _loadNotes();
+  }
+
+  Future<void> _loadNotes() async {
+    setState(() {
+      _isLoading = true;
+      _storageError = null;
+    });
+    try {
+      final notes = await _repository.loadNotes();
+      if (!mounted) return;
+      setState(() {
+        _notes = notes;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _storageError = 'Catatan gagal dimuat. Coba lagi.';
+      });
+    }
   }
 
   void _updateStudent(Student student) => setState(() => _student = student);
 
-  void _addNote(Note note) => setState(() => _notes = [..._notes, note]);
+  Future<void> _addNote(Note note) async {
+    await _repository.addNote(note);
+    if (mounted) setState(() => _notes = [..._notes, note]);
+  }
 
-  void _deleteNote(String id) {
+  Future<void> _deleteNote(String id) async {
     if (!_notes.any((note) => note.id == id)) return;
-    setState(() => _notes = _notes.where((note) => note.id != id).toList());
+    await _repository.deleteNote(id);
+    if (mounted) {
+      setState(() => _notes = _notes.where((note) => note.id != id).toList());
+    }
   }
 
   /// Meneruskan state dan callback ke subtree.
@@ -99,6 +151,9 @@ class _AppProviderWrapperState extends State<AppProviderWrapper> {
       updateStudent: _updateStudent,
       addNote: _addNote,
       deleteNote: _deleteNote,
+      isLoading: _isLoading,
+      storageError: _storageError,
+      reloadNotes: _loadNotes,
       child: widget.child,
     );
   }

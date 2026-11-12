@@ -18,6 +18,7 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _content = TextEditingController();
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -26,18 +27,28 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
     super.dispose();
   }
 
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _save() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
     final now = DateTime.now();
-    AppProvider.of(context).addNote(
-      Note(
-        id: now.microsecondsSinceEpoch.toString(),
-        title: Validators.sanitize(_title.text),
-        content: Validators.sanitize(_content.text),
-        date: now,
-      ),
-    );
-    Navigator.pop(context, true);
+    try {
+      await AppProvider.of(context).addNote(
+        Note(
+          id: now.microsecondsSinceEpoch.toString(),
+          title: Validators.sanitize(_title.text),
+          content: Validators.sanitize(_content.text),
+          date: now,
+        ),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Catatan gagal disimpan. Coba lagi.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   /// Membuat form judul dan isi catatan.
@@ -77,7 +88,7 @@ class _NoteFormScreenState extends State<NoteFormScreen> {
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: _save,
+                  onPressed: _saving ? null : _save,
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Simpan Catatan'),
                 ),
