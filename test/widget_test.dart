@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:responsi_profil_mahasiswa/main.dart';
 import 'package:responsi_profil_mahasiswa/models/student.dart';
+import 'package:responsi_profil_mahasiswa/utils/validators.dart';
 
 /// Menguji model mahasiswa dan interaksi halaman profil.
 void main() {
@@ -47,5 +48,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Budi Santoso'), findsOneWidget);
     expect(find.text('BS'), findsOneWidget);
+  });
+
+  test('Validasi batas judul dan isi, lalu sanitasi karakter', () {
+    expect(Validators.validateTitle('ab'), isNotNull);
+    expect(Validators.validateTitle('a' * 51), isNotNull);
+    expect(Validators.validateTitle('abc'), isNull);
+    expect(Validators.validateContent('123456789'), isNotNull);
+    expect(Validators.validateContent('a' * 1001), isNotNull);
+    expect(Validators.validateContent('a' * 10), isNull);
+    expect(Validators.sanitize('  <judul> "aman" \'ok\'  '), 'judul aman ok');
+    expect(Validators.validateContent('isi\x00catatan valid'), isNotNull);
+  });
+
+  testWidgets('Form catatan validasi lalu menyimpan di provider', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.tap(find.text('Tambah Catatan'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Simpan Catatan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Judul minimal 3 karakter.'), findsOneWidget);
+    expect(find.text('Isi catatan minimal 10 karakter.'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, '  <Kuliah>  ');
+    await tester.enterText(
+      find.byType(TextFormField).last,
+      '  Catatan kuliah pertama  ',
+    );
+    await tester.tap(find.text('Simpan Catatan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kuliah'), findsOneWidget);
+    expect(find.text('Catatan sementara (1)'), findsOneWidget);
   });
 }

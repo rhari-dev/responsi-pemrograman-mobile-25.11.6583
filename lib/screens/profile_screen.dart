@@ -1,48 +1,35 @@
 import 'package:flutter/material.dart';
 
 import '../models/student.dart';
+import '../providers/app_provider.dart';
 import '../widgets/profile_card.dart';
+import 'note_form_screen.dart';
 
-/// Halaman profil mahasiswa dengan penyuntingan data sementara.
-class ProfileScreen extends StatefulWidget {
-  /// Membuat halaman profil, dengan data awal opsional.
-  const ProfileScreen({super.key, this.initialStudent});
+/// Halaman profil mahasiswa yang membaca data dari [AppProvider].
+class ProfileScreen extends StatelessWidget {
+  /// Membuat halaman profil.
+  const ProfileScreen({super.key});
 
-  /// Data awal profil; jika kosong, contoh data ditampilkan.
-  final Student? initialStudent;
-
-  /// Membuat state halaman profil.
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  late Student _student;
-
-  @override
-  void initState() {
-    super.initState();
-    _student =
-        widget.initialStudent ??
-        Student(
-          name: 'Mahasiswa Amikom',
-          nim: '00000000',
-          programStudi: 'Informatika',
-          email: 'mahasiswa@example.com',
-        );
-  }
-
-  Future<void> _editProfile() async {
+  Future<void> _editProfile(BuildContext context, Student student) async {
     final edited = await showDialog<Student>(
       context: context,
-      builder: (context) => _EditProfileDialog(student: _student),
+      builder: (context) => _EditProfileDialog(student: student),
     );
-    if (!mounted || edited == null) return;
-    setState(() => _student = edited);
+    if (!context.mounted || edited == null) return;
+    AppProvider.of(context).updateStudent(edited);
   }
 
+  Future<void> _openNoteForm(BuildContext context) async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const NoteFormScreen()),
+    );
+  }
+
+  /// Membangun tampilan profil serta pintu masuk form catatan.
   @override
   Widget build(BuildContext context) {
+    final provider = AppProvider.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Profil Mahasiswa')),
       body: SafeArea(
@@ -51,13 +38,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ProfileCard(student: _student),
+              ProfileCard(student: provider.student),
               const SizedBox(height: 20),
               FilledButton.icon(
-                onPressed: _editProfile,
+                onPressed: () => _editProfile(context, provider.student),
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit Profil'),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _openNoteForm(context),
+                icon: const Icon(Icons.note_add_outlined),
+                label: const Text('Tambah Catatan'),
+              ),
+              if (provider.notes.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Text(
+                  'Catatan sementara (${provider.notes.length})',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                for (final note in provider.notes)
+                  ListTile(title: Text(note.title)),
+              ],
             ],
           ),
         ),
