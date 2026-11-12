@@ -1,30 +1,51 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:responsi_profil_mahasiswa/main.dart';
+import 'package:responsi_profil_mahasiswa/models/student.dart';
 
+/// Menguji model mahasiswa dan interaksi halaman profil.
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  test('Student merapikan input dan menolak karakter berbahaya', () {
+    final student = Student(
+      name: '  Budi   Santoso  ',
+      nim: '  12345678  ',
+      programStudi: '  Informatika  ',
+      email: '  budi@example.com  ',
+    );
+
+    expect(student.name, 'Budi Santoso');
+    expect(student.nim, '12345678');
+    expect(student.programStudi, 'Informatika');
+    expect(student.email, 'budi@example.com');
+    expect(Student.validateName('<script>'), isNotNull);
+    expect(Student.validateEmail('bukan-email'), isNotNull);
+  });
+
+  testWidgets('Profil tampil dan bisa diedit', (tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Mahasiswa Amikom'), findsOneWidget);
+    expect(find.text('NIM: 00000000'), findsOneWidget);
+    expect(find.text('Informatika'), findsOneWidget);
+    expect(find.text('mahasiswa@example.com'), findsOneWidget);
+    expect(find.text('MA'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.tap(find.text('Edit Profil'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsNWidgets(4));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).first, '<script>');
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Nama mengandung karakter tidak diperbolehkan.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'Budi Santoso');
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Budi Santoso'), findsOneWidget);
+    expect(find.text('BS'), findsOneWidget);
   });
 }
